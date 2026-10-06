@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBER_HUB // AI & Real Auth</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            pink: '#ff007f',
+                            cyan: '#00f3ff',
+                            purple: '#9d00ff',
+                            dark: '#0a0a12',
+                            panel: '#121225',
+                            yellow: '#ffe600'
+                        }
+                    },
+                    fontFamily: {
+                        orbitron: ['Orbitron', 'sans-serif'],
+                        rajdhani: ['Rajdhani', 'sans-serif'],
+                        mono: ['Share Tech Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #05050a;
+            color: #00f3ff;
+            font-family: 'Rajdhani', sans-serif;
+            overflow-x: hidden;
+        }
+
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0, 0, 0, 0.3) 50%,
+                rgba(0, 0, 0, 0.3)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+        }
+
+        .glow-cyan {
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.8), 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+        .glow-pink {
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.8), 0 0 20px rgba(255, 0, 127, 0.4);
+        }
+        .box-glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3), inset 0 0 10px rgba(0, 243, 255, 0.1);
+        }
+        .box-glow-pink {
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.3), inset 0 0 10px rgba(255, 0, 127, 0.1);
+        }
+
+        .cyber-tile {
+            clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+        }
+        .cyber-btn {
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            transition: all 0.2s ease;
+        }
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.2);
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a12;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #00f3ff;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff007f;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative select-none">
+    <!-- MATRIX BACKGROUND -->
+    <canvas id="matrixCanvas" class="fixed top-0 left-0 w-full h-full opacity-20 pointer-events-none z-0"></canvas>
+    <div class="scanlines fixed top-0 left-0 w-full h-full z-10 pointer-events-none"></div>
+
+    <!-- TOAST NOTIFICATIONS -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <div class="relative z-20 flex flex-col min-h-screen">
+        <header class="border-b border-cyber-cyan/30 bg-cyber-dark/80 backdrop-blur-md px-4 py-3 sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg border-2 border-cyber-cyan flex items-center justify-center bg-cyber-purple/20 box-glow-cyan">
+                        <i data-lucide="cpu" class="w-6 h-6 text-cyber-cyan animate-pulse"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-orbitron font-black text-xl tracking-wider text-white glow-cyan">
+                            CYBER<span class="text-cyber-pink">//</span>NEXUS
+                        </h1>
+                        <p class="font-mono text-xs text-cyber-cyan/70">AUTH REAL: <span id="authStatusBadge" class="text-yellow-400">DESCONECTADO</span></p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="flex items-center gap-1 sm:gap-2 bg-cyber-panel/80 p-1 border border-cyber-cyan/20 rounded-lg">
+                    <button onclick="switchTab('chat')" id="nav-chat" class="cyber-nav-btn active px-3 sm:px-4 py-2 font-orbitron text-xs sm:text-sm font-semibold rounded flex items-center gap-2 transition-all bg-cyber-cyan text-black">
+                        <i data-lucide="bot" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">CHAT IA</span>
+                    </button>
+                    <button onclick="switchTab('games')" id="nav-games" class="cyber-nav-btn px-3 sm:px-4 py-2 font-orbitron text-xs sm:text-sm font-semibold rounded flex items-center gap-2 transition-all text-cyber-cyan hover:bg-cyber-cyan/10">
+                        <i data-lucide="gamepad-2" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">JUEGOS</span>
+                    </button>
+                    <button onclick="switchTab('settings')" id="nav-settings" class="cyber-nav-btn px-3 sm:px-4 py-2 font-orbitron text-xs sm:text-sm font-semibold rounded flex items-center gap-2 transition-all text-cyber-cyan hover:bg-cyber-cyan/10">
+                        <i data-lucide="settings" class="w-4 h-4"></i>
+                        <span class="hidden md:inline">AJUSTES & AUTH</span>
+                    </button>
+                </nav>
+
+                <!-- User Profile / Google Sign-In Status -->
+                <div class="flex items-center gap-3">
+                    <div id="userProfile" class="flex items-center gap-3">
+                        <button id="googleAuthBtn" onclick="handleGoogleSignIn()" class="cyber-btn bg-cyber-pink hover:bg-pink-600 text-white px-4 py-2 font-orbitron text-xs font-bold flex items-center gap-2 border border-pink-400 box-glow-pink">
+                            <i data-lucide="log-in" class="w-4 h-4"></i>
+                            INICIAR CON GOOGLE
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 flex flex-col">
+
+            <section id="tab-chat" class="tab-content flex-1 flex flex-col bg-cyber-panel/60 border border-cyber-cyan/30 rounded-xl box-glow-cyan overflow-hidden backdrop-blur-md">
+                <div class="p-4 border-b border-cyber-cyan/20 bg-black/40 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">
+                            <div class="w-3 h-3 bg-green-500 rounded-full animate-ping absolute top-0 right-0"></div>
+                            <div class="w-3 h-3 bg-green-500 rounded-full absolute top-0 right-0"></div>
+                            <i data-lucide="sparkles" class="w-8 h-8 text-cyber-pink"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-orbitron font-bold text-white text-base sm:text-lg">GEMINI_NEXUS // CORE AI</h2>
+                            <p class="font-mono text-xs text-cyber-cyan/60">CONEXIÓN DIRECTA CON GEMINI 3 FLASH</p>
+                        </div>
+                    </div>
+                    <button onclick="clearChat()" class="p-2 hover:bg-cyber-pink/20 border border-cyber-pink/40 text-cyber-pink rounded text-xs font-mono flex items-center gap-1 transition">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        <span class="hidden sm:inline">LIMPIAR MEMORIA</span>
+                    </button>
+                </div>
+
+                <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-4 font-mono text-sm min-h-[380px] max-h-[550px]">
+                    <div class="flex gap-3 max-w-2xl">
+                        <div class="w-8 h-8 rounded bg-cyber-purple/30 border border-cyber-purple flex items-center justify-center shrink-0">
+                            <i data-lucide="bot" class="w-5 h-5 text-cyber-pink"></i>
+                        </div>
+                        <div class="bg-cyber-dark/80 border border-cyber-pink/40 p-3 rounded-r-lg rounded-bl-lg text-gray-200 space-y-2 box-glow-pink">
+                            <p class="font-orbitron font-bold text-cyber-pink text-xs">// CONEXIÓN CIBERNÉTICA ESTABLECIDA</p>
+                            <p>¡Hola Operador! Soy Gemini Core. Ahora puedes iniciar sesión con tu cuenta **REAL de Google** para guardar tu puntuación y chatear libremente.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 border-t border-cyber-cyan/20 bg-black/60">
+                    <form id="chatForm" onsubmit="handleChatSubmit(event)" class="flex gap-2">
+                        <input type="text" id="userInput" placeholder="Ingresa comandos o mensajes para Gemini..." 
+                            class="flex-1 bg-cyber-dark/90 border border-cyber-cyan/40 focus:border-cyber-cyan rounded px-4 py-3 text-white font-mono placeholder-cyber-cyan/40 focus:outline-none focus:ring-1 focus:ring-cyber-cyan">
+                        <button type="submit" id="sendBtn" class="cyber-btn bg-cyber-cyan text-black px-6 font-orbitron font-bold flex items-center gap-2 box-glow-cyan hover:bg-cyan-300">
+                            <span>ENVIAR</span>
+                            <i data-lucide="send" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                    <div class="flex justify-between items-center mt-2 font-mono text-xs text-cyber-cyan/50">
+                        <span id="apiKeyStatusText">🔑 API Key: Gemini 3 Flash Lista</span>
+                        <span>Shift + Enter para salto de línea</span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-games" class="tab-content hidden flex-1 flex-col gap-6">
+                <div class="flex justify-between items-center border-b border-cyber-pink/30 pb-3">
+                    <div>
+                        <h2 class="font-orbitron font-black text-2xl text-white glow-pink">ZONA DE MINI-JUEGOS</h2>
+                        <p class="font-mono text-xs text-cyber-cyan">TUS PUNTOS SE GUARDAN EN TU PERFIL DE FIREBASE REAL</p>
+                    </div>
+                    <div class="font-orbitron text-cyber-yellow font-bold text-sm bg-cyber-yellow/10 border border-cyber-yellow px-3 py-1 rounded">
+                        PUNTOS CIBERNÉTICOS: <span id="cyberScore">0</span> PTS
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Neon Runner -->
+                    <div class="cyber-tile bg-cyber-panel/80 border border-cyber-cyan/40 p-5 flex flex-col justify-between box-glow-cyan">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-mono px-2 py-1 bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan rounded">REFLEJOS</span>
+                                <i data-lucide="zap" class="w-6 h-6 text-cyber-yellow"></i>
+                            </div>
+                            <h3 class="font-orbitron font-bold text-xl text-white">NEON RUNNER 2099</h3>
+                            <p class="font-mono text-xs text-gray-300">Esquiva virus en el ciberespacio. Los puntos irán directo a tu cuenta autenticada.</p>
+                        </div>
+                        <div class="mt-6">
+                            <button onclick="startNeonRunner()" class="w-full cyber-btn bg-cyber-cyan hover:bg-cyan-300 text-black font-orbitron font-bold py-3 flex justify-center items-center gap-2">
+                                <i data-lucide="play" class="w-4 h-4"></i> JUGAR NEON RUNNER
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Cyber Hack -->
+                    <div class="cyber-tile bg-cyber-panel/80 border border-cyber-pink/40 p-5 flex flex-col justify-between box-glow-pink">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-mono px-2 py-1 bg-cyber-pink/20 border border-cyber-pink text-cyber-pink rounded">VELOCIDAD</span>
+                                <i data-lucide="terminal" class="w-6 h-6 text-cyber-pink"></i>
+                            </div>
+                            <h3 class="font-orbitron font-bold text-xl text-white">CYBER-GRID HACK</h3>
+                            <p class="font-mono text-xs text-gray-300">Hackea nodos parpadeantes antes de que expire el cortafuegos.</p>
+                        </div>
+                        <div class="mt-6">
+                            <button onclick="startGridHack()" class="w-full cyber-btn bg-cyber-pink hover:bg-pink-600 text-white font-orbitron font-bold py-3 flex justify-center items-center gap-2">
+                                <i data-lucide="shield-alert" class="w-4 h-4"></i> HACKEAR NODOS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="gameArena" class="hidden bg-black/90 border-2 border-cyber-cyan rounded-xl p-4 flex flex-col items-center justify-center relative min-h-[400px]">
+                    <button onclick="closeGameArena()" class="absolute top-4 right-4 text-cyber-pink hover:text-white p-2">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                    <div id="gameCanvasContainer" class="w-full max-w-xl flex flex-col items-center"></div>
+                </div>
+            </section>
+
+            <section id="tab-settings" class="tab-content hidden flex-1 flex-col gap-6 max-w-3xl mx-auto w-full">
+                <!-- Settings Panel -->
+                <div class="bg-cyber-panel/80 border border-cyber-cyan/40 p-6 rounded-xl box-glow-cyan space-y-6">
+                    <div class="flex items-center gap-3 border-b border-cyber-cyan/20 pb-4">
+                        <i data-lucide="sliders" class="w-8 h-8 text-cyber-cyan"></i>
+                        <div>
+                            <h2 class="font-orbitron font-bold text-xl text-white">AJUSTES DE API & FIREBASE</h2>
+                            <p class="font-mono text-xs text-cyber-cyan/70">CONFIGURA TU PROPIO PROYECTO PARA AUTENTICACIÓN REAL DE GOOGLE Y GEMINI</p>
+                        </div>
+                    </div>
+
+                    <!-- Gemini API Key -->
+                    <div class="space-y-3">
+                        <label class="block font-orbitron text-sm text-cyber-cyan">GEMINI API KEY PERSONALIZADA:</label>
+                        <input type="password" id="customApiKey" placeholder="AIzaSy..." 
+                            class="w-full bg-cyber-dark/90 border border-cyber-cyan/40 focus:border-cyber-cyan rounded p-3 text-white font-mono text-sm placeholder-cyber-cyan/30">
+                        <p class="font-mono text-xs text-gray-400">Si la dejas vacía, se usará la API Key proporcionada automáticamente por el entorno.</p>
+                        <button onclick="saveApiKey()" class="cyber-btn bg-cyber-cyan text-black px-6 py-2 font-orbitron font-bold text-xs flex items-center gap-2">
+                            <i data-lucide="save" class="w-4 h-4"></i> GUARDAR LLAVE GEMINI
+                        </button>
+                    </div>
+
+                    <!-- Custom Firebase Config Panel -->
+                    <div class="border-t border-cyber-cyan/20 pt-6 space-y-3">
+                        <h3 class="font-orbitron font-bold text-md text-white">CONFIGURACIÓN PROPIA DE FIREBASE (JSON):</h3>
+                        <p class="font-mono text-xs text-gray-400">
+                            Para usar tu **propia app de Google Cloud / Firebase Console** y permitir inicio de sesión real desde cualquier dominio, pega aquí el JSON de `firebaseConfig`:
+                        </p>
+                        <textarea id="firebaseConfigJson" rows="5" placeholder='{
+  "apiKey": "AIzaSy...",
+  "authDomain": "tu-proyecto.firebaseapp.com",
+  "projectId": "tu-proyecto",
+  "storageBucket": "tu-proyecto.appspot.com",
+  "messagingSenderId": "123456789",
+  "appId": "1:123456789:web:abcdef"
+}' class="w-full bg-cyber-dark/90 border border-cyber-pink/40 focus:border-cyber-pink rounded p-3 text-white font-mono text-xs focus:outline-none"></textarea>
+                        
+                        <div class="flex gap-3">
+                            <button onclick="saveFirebaseConfig()" class="cyber-btn bg-cyber-pink text-white px-6 py-2 font-orbitron font-bold text-xs flex items-center gap-2">
+                                <i data-lucide="database" class="w-4 h-4"></i> GUARDAR FIREBASE CONFIG
+                            </button>
+                            <button onclick="clearFirebaseConfig()" class="p-2 border border-red-500/50 text-red-400 hover:bg-red-900/30 rounded font-mono text-xs">
+                                RESTAURAR DEFAULT
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Real User Database State -->
+                    <div class="border-t border-cyber-cyan/20 pt-6 space-y-3">
+                        <h3 class="font-orbitron font-bold text-md text-white">ESTADO DE LA SESIÓN FIREBASE</h3>
+                        <div class="bg-cyber-dark/90 p-4 rounded border border-cyber-cyan/20 font-mono text-xs space-y-2">
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">Usuario Autenticado:</span>
+                                <span id="settingsUserEmail" class="text-cyber-pink">No Autenticado</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-400">UID de Firebase:</span>
+                                <span id="settingsUserUid" class="text-cyber-cyan">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="border-t border-cyber-cyan/20 bg-cyber-dark/90 p-4 text-center font-mono text-xs text-cyber-cyan/50">
+            CYBER_NEXUS // REAL GOOGLE AUTH & GEMINI AI INTEGRATION
+        </footer>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider, 
+            signOut, 
+            onAuthStateChanged,
+            signInWithCustomToken,
+            signInAnonymously
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            updateDoc 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Variables
+        let app, auth, db;
+        let currentUser = null;
+        let cyberPoints = 0;
+
+        // Default or Custom Config
+        function getFirebaseConfig() {
+            const custom = localStorage.getItem('custom_firebase_config');
+            if (custom) {
+                try {
+                    return JSON.parse(custom);
+                } catch(e) {
+                    console.error("Config personalizada inválida, usando por defecto.");
+                }
+            }
+            
+            // Environment provided config
+            if (typeof __firebase_config !== 'undefined') {
+                return JSON.parse(__firebase_config);
+            }
+
+            // Demo fallback
+            return {
+                apiKey: "AIzaSyDemoKeyFallback1234567890",
+                authDomain: "cyber-hub-demo.firebaseapp.com",
+                projectId: "cyber-hub-demo",
+                storageBucket: "cyber-hub-demo.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:123456789:web:123456"
+            };
+        }
+
+        async function initFirebase() {
+            try {
+                const config = getFirebaseConfig();
+                app = initializeApp(config);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // Initial Auth Check
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token).catch(() => {});
+                }
+
+                // Auth Listener
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        currentUser = user;
+                        updateUserUI(user);
+                        await syncUserData(user);
+                    } else {
+                        currentUser = null;
+                        updateUserUI(null);
+                    }
+                });
+            } catch (err) {
+                console.warn("Error al inicializar Firebase SDK:", err);
+            }
+        }
+
+        // Real Google Sign-In Function
+        window.handleGoogleSignIn = async function() {
+            if (!auth) {
+                showToast("Firebase no está inicializado.", "error");
+                return;
+            }
+            const provider = new GoogleAuthProvider();
+            try {
+                showToast("Conectando con Google Auth...");
+                const result = await signInWithPopup(auth, provider);
+                showToast(`¡Bienvenido ${result.user.displayName}!`, "success");
+                confetti({ particleCount: 60, spread: 70, origin: { y: 0.8 } });
+            } catch (error) {
+                console.error("Google Auth Error:", error);
+                showToast(`Error al iniciar sesión: ${error.message}`, "error");
+            }
+        };
+
+        window.handleSignOut = async function() {
+            if (auth) {
+                await signOut(auth);
+                showToast("Sesión cerrada correctamente.");
+            }
+        };
+
+        async function syncUserData(user) {
+            if (!db || !user) return;
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'cyber-hub-app';
+            const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data');
+
+            try {
+                const snap = await getDoc(userRef);
+                if (snap.exists()) {
+                    cyberPoints = snap.data().points || 0;
+                } else {
+                    await setDoc(userRef, {
+                        name: user.displayName,
+                        email: user.email,
+                        points: 0,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+                document.getElementById('cyberScore').innerText = cyberPoints;
+            } catch (e) {
+                console.warn("Firestore Sync Error:", e);
+            }
+        }
+
+        window.saveUserPoints = async function(addedPoints) {
+            cyberPoints += addedPoints;
+            document.getElementById('cyberScore').innerText = cyberPoints;
+
+            if (currentUser && db) {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'cyber-hub-app';
+                const userRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'profile', 'data');
+                try {
+                    await updateDoc(userRef, { points: cyberPoints }).catch(async () => {
+                        await setDoc(userRef, { points: cyberPoints }, { merge: true });
+                    });
+                } catch(e) {
+                    console.warn("Error guardando puntos:", e);
+                }
+            }
+        };
+
+        function updateUserUI(user) {
+            const userContainer = document.getElementById('userProfile');
+            const statusBadge = document.getElementById('authStatusBadge');
+            const settingsEmail = document.getElementById('settingsUserEmail');
+            const settingsUid = document.getElementById('settingsUserUid');
+
+            if (user) {
+                statusBadge.innerText = "GOOGLE AUTENTICADO";
+                statusBadge.className = "text-green-400";
+                userContainer.innerHTML = `
+                    <div class="flex items-center gap-2 bg-cyber-panel border border-cyber-pink/40 px-3 py-1.5 rounded-lg box-glow-pink">
+                        <img src="${user.photoURL || 'https://placehold.co/100x100/ff007f/fff?text=U'}" class="w-6 h-6 rounded-full border border-cyber-pink">
+                        <span class="font-mono text-xs text-white">${user.displayName || 'Usuario'}</span>
+                        <button onclick="handleSignOut()" class="text-cyber-pink hover:text-white ml-2" title="Cerrar Sesión">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                `;
+                settingsEmail.innerText = user.email || 'Autenticado';
+                settingsUid.innerText = user.uid;
+            } else {
+                statusBadge.innerText = "DESCONECTADO";
+                statusBadge.className = "text-yellow-400";
+                userContainer.innerHTML = `
+                    <button onclick="handleGoogleSignIn()" class="cyber-btn bg-cyber-pink hover:bg-pink-600 text-white px-4 py-2 font-orbitron text-xs font-bold flex items-center gap-2 border border-pink-400 box-glow-pink">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        INICIAR CON GOOGLE
+                    </button>
+                `;
+                settingsEmail.innerText = "No Autenticado";
+                settingsUid.innerText = "-";
+            }
+            lucide.createIcons();
+        }
+
+        window.saveFirebaseConfig = function() {
+            const raw = document.getElementById('firebaseConfigJson').value.trim();
+            try {
+                JSON.parse(raw);
+                localStorage.setItem('custom_firebase_config', raw);
+                showToast("Configuración de Firebase guardada. Recargando...", "success");
+                setTimeout(() => location.reload(), 1000);
+            } catch(e) {
+                showToast("JSON de Firebase inválido.", "error");
+            }
+        };
+
+        window.clearFirebaseConfig = function() {
+            localStorage.removeItem('custom_firebase_config');
+            showToast("Configuración restaurada por defecto. Recargando...");
+            setTimeout(() => location.reload(), 1000);
+        };
+
+        // Initialize Firebase on window load
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+            const savedConfig = localStorage.getItem('custom_firebase_config');
+            if (savedConfig) {
+                document.getElementById('firebaseConfigJson').value = savedConfig;
+            }
+        });
+    </script>
+
+    <script>
+        let activeGameInterval = null;
+
+        window.onload = function () {
+            lucide.createIcons();
+            initMatrixBackground();
+            loadSavedApiKey();
+        };
+
+        function initMatrixBackground() {
+            const canvas = document.getElementById('matrixCanvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const chars = '01101010101CYBERGEMININEXUSMATRIX';
+            const fontSize = 14;
+            const columns = Math.floor(canvas.width / fontSize);
+            const drops = Array(columns).fill(1);
+
+            function draw() {
+                ctx.fillStyle = 'rgba(5, 5, 10, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#00f3ff';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < drops.length; i++) {
+                    const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        drops[i] = 0;
+                    }
+                    drops[i]++;
+                }
+            }
+            setInterval(draw, 33);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.cyber-nav-btn').forEach(btn => {
+                btn.classList.remove('bg-cyber-cyan', 'text-black');
+                btn.classList.add('text-cyber-cyan');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            activeBtn.classList.add('bg-cyber-cyan', 'text-black');
+            activeBtn.classList.remove('text-cyber-cyan');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'error' ? 'bg-red-900/90 border-red-500' : 
+                           type === 'success' ? 'bg-green-900/90 border-green-500' : 'bg-cyber-panel border-cyber-cyan';
+
+            toast.className = `cyber-tile p-3 border text-white font-mono text-xs box-glow-cyan flex items-center gap-2 transition-all duration-300 pointer-events-auto ${bgColor}`;
+            toast.innerHTML = `<i data-lucide="${type === 'error' ? 'alert-triangle' : 'check-circle'}" class="w-4 h-4"></i> ${message}`;
+            
+            container.appendChild(toast);
+            lucide.createIcons();
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        function loadSavedApiKey() {
+            const key = localStorage.getItem('gemini_api_key');
+            if (key) {
+                document.getElementById('customApiKey').value = key;
+                document.getElementById('apiKeyStatusText').innerText = "🔑 API Key Personalizada Activa";
+            }
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('customApiKey').value.trim();
+            localStorage.setItem('gemini_api_key', key);
+            document.getElementById('apiKeyStatusText').innerText = key ? "🔑 API Key Personalizada Activa" : "🔑 API Key: Gemini 3 Flash Lista";
+            showToast('Gemini API Key guardada', 'success');
+        }
+
+        async function fetchGeminiResponse(userPrompt) {
+            const customKey = localStorage.getItem('gemini_api_key') || "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${customKey}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "Eres Gemini, una IA futurista en la plataforma CyberNexus. Responde de forma futurista, directa y amigable." }]
+                }
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "Error en la red neuronal.";
+        }
+
+        async function handleChatSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('userInput');
+            const query = input.value.trim();
+            if (!query) return;
+
+            appendMessage(query, 'user');
+            input.value = '';
+
+            const loadingId = appendLoadingMessage();
+
+            try {
+                const aiReply = await fetchGeminiResponse(query);
+                removeMessage(loadingId);
+                appendMessage(aiReply, 'ai');
+            } catch (err) {
+                removeMessage(loadingId);
+                appendMessage("❌ Error al conectar con Gemini. Verifica tu API Key.", 'ai');
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const chatBox = document.getElementById('chatMessages');
+            const msgDiv = document.createElement('div');
+            const isUser = sender === 'user';
+
+            msgDiv.className = `flex gap-3 max-w-2xl ${isUser ? 'ml-auto flex-row-reverse' : ''}`;
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded ${isUser ? 'bg-cyber-cyan/30 border-cyber-cyan' : 'bg-cyber-purple/30 border-cyber-purple'} border flex items-center justify-center shrink-0">
+                    <i data-lucide="${isUser ? 'user' : 'bot'}" class="w-5 h-5 ${isUser ? 'text-cyber-cyan' : 'text-cyber-pink'}"></i>
+                </div>
+                <div class="bg-cyber-dark/80 border ${isUser ? 'border-cyber-cyan/40 box-glow-cyan' : 'border-cyber-pink/40 box-glow-pink'} p-3 rounded-lg text-gray-200">
+                    <p class="font-orbitron font-bold ${isUser ? 'text-cyber-cyan' : 'text-cyber-pink'} text-xs">// ${isUser ? 'OPERADOR' : 'GEMINI CORE'}</p>
+                    <p class="mt-1 whitespace-pre-line">${text}</p>
+                </div>
+            `;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            lucide.createIcons();
+        }
+
+        function appendLoadingMessage() {
+            const chatBox = document.getElementById('chatMessages');
+            const id = 'loading-' + Date.now();
+            const msgDiv = document.createElement('div');
+            msgDiv.id = id;
+            msgDiv.className = 'flex gap-3 max-w-2xl';
+            msgDiv.innerHTML = `
+                <div class="w-8 h-8 rounded bg-cyber-purple/30 border border-cyber-purple flex items-center justify-center shrink-0">
+                    <i data-lucide="bot" class="w-5 h-5 text-cyber-pink animate-spin"></i>
+                </div>
+                <div class="bg-cyber-dark/80 border border-cyber-pink/40 p-3 rounded-lg text-cyber-pink font-mono text-xs animate-pulse">
+                    PROCESANDO ENTRADA EN MATRIZ...
+                </div>
+            `;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            lucide.createIcons();
+            return id;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function clearChat() {
+            document.getElementById('chatMessages').innerHTML = '';
+            appendMessage("Memoria formateada. Lista para nuevas consultas.", 'ai');
+        }
+
+        function closeGameArena() {
+            document.getElementById('gameArena').classList.add('hidden');
+            if (activeGameInterval) clearInterval(activeGameInterval);
+        }
+
+        // NEON RUNNER GAME
+        function startNeonRunner() {
+            const arena = document.getElementById('gameArena');
+            const container = document.getElementById('gameCanvasContainer');
+            arena.classList.remove('hidden');
+
+            container.innerHTML = `
+                <h3 class="font-orbitron font-bold text-cyber-cyan mb-2">NEON RUNNER 2099</h3>
+                <canvas id="runnerCanvas" width="400" height="300" class="border border-cyber-cyan rounded bg-black/80"></canvas>
+                <p class="font-mono text-xs text-cyber-cyan mt-2">Mueve el cursor o desliza para evitar obstáculos.</p>
+            `;
+
+            const canvas = document.getElementById('runnerCanvas');
+            const ctx = canvas.getContext('2d');
+            let playerX = 200;
+            let obstacles = [];
+            let score = 0;
+            let gameOver = false;
+
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                playerX = e.clientX - rect.left;
+            });
+
+            if (activeGameInterval) clearInterval(activeGameInterval);
+
+            activeGameInterval = setInterval(() => {
+                if (gameOver) return;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#00f3ff';
+                ctx.fillRect(playerX - 15, 260, 30, 15);
+
+                if (Math.random() < 0.1) {
+                    obstacles.push({ x: Math.random() * (canvas.width - 20), y: 0, size: 20 });
+                }
+
+                for (let i = 0; i < obstacles.length; i++) {
+                    let obs = obstacles[i];
+                    obs.y += 4;
+                    ctx.fillStyle = '#ff007f';
+                    ctx.fillRect(obs.x, obs.y, obs.size, obs.size);
+
+                    if (obs.y + obs.size >= 260 && obs.x + obs.size >= playerX - 15 && obs.x <= playerX + 15) {
+                        gameOver = true;
+                        clearInterval(activeGameInterval);
+                        showToast(`GAME OVER. Score: ${score}`, 'error');
+                        if (window.saveUserPoints) window.saveUserPoints(score);
+                    }
+                }
+
+                obstacles = obstacles.filter(o => o.y < canvas.height);
+                score++;
+                ctx.fillStyle = '#ffe600';
+                ctx.font = '12px Orbitron';
+                ctx.fillText(`SCORE: ${score}`, 10, 20);
+            }, 30);
+        }
+
+        // GRID HACK GAME
+        function startGridHack() {
+            const arena = document.getElementById('gameArena');
+            const container = document.getElementById('gameCanvasContainer');
+            arena.classList.remove('hidden');
+
+            let hackScore = 0;
+            let timeLeft = 15;
+
+            container.innerHTML = `
+                <div class="text-center space-y-3">
+                    <h3 class="font-orbitron font-bold text-cyber-pink">CYBER GRID HACK</h3>
+                    <div class="flex gap-4 font-mono text-sm justify-center">
+                        <span class="text-cyber-cyan">NODOS HACKEADOS: <b id="hackCount">0</b></span>
+                        <span class="text-cyber-yellow">TIEMPO: <b id="hackTimer">15</b>s</span>
+                    </div>
+                    <div id="gridArea" class="grid grid-cols-4 gap-3 w-64 h-64 bg-black/60 p-3 border border-cyber-pink rounded"></div>
+                </div>
+            `;
+
+            const grid = document.getElementById('gridArea');
+            
+            function renderGrid() {
+                grid.innerHTML = '';
+                const activeIndex = Math.floor(Math.random() * 16);
+                for (let i = 0; i < 16; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = `rounded transition ${i === activeIndex ? 'bg-cyber-pink box-glow-pink animate-pulse' : 'bg-cyber-dark/80 border border-cyber-cyan/20'}`;
+                    if (i === activeIndex) {
+                        btn.onclick = () => {
+                            hackScore++;
+                            document.getElementById('hackCount').innerText = hackScore;
+                            renderGrid();
+                        };
+                    }
+                    grid.appendChild(btn);
+                }
+            }
+
+            renderGrid();
+
+            if (activeGameInterval) clearInterval(activeGameInterval);
+
+            activeGameInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('hackTimer').innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    clearInterval(activeGameInterval);
+                    grid.innerHTML = '<p class="col-span-4 text-cyber-pink font-orbitron text-center my-auto">¡TIEMPO AGOTADO!</p>';
+                    showToast(`Hackeo finalizado: +${hackScore * 10} pts`, 'success');
+                    if (window.saveUserPoints) window.saveUserPoints(hackScore * 10);
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
